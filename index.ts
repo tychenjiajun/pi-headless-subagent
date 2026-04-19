@@ -147,13 +147,13 @@ const ensureResultPersisted = async (
   const path = join(directory, filename);
 
   try {
-    await fs.mkdir(directory, { recursive: true, mode: 0o7_0_0 });
-    await fs.chmod(directory, 0o7_0_0).catch(() => {});
+    await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+    await fs.chmod(directory, 0o700).catch(() => {});
     await fs.writeFile(path, handle.resultText, {
       encoding: 'utf8',
-      mode: 0o6_0_0,
+      mode: 0o600,
     });
-    await fs.chmod(path, 0o6_0_0).catch(() => {});
+    await fs.chmod(path, 0o600).catch(() => {});
     handle.resultPath = path;
     handle.persistedResultHash = nextHash;
     return path;
@@ -373,7 +373,7 @@ export default function subagentExtension(pi: ExtensionAPI) {
   ): void => {
     Object.assign(handle, patch);
     handle.updatedAt = now();
-    trimRetainedHandles();
+    if (handles.size > MAX_RETAINED_HANDLES) trimRetainedHandles();
   };
 
   const settleHandle = (handle: SubagentHandle): void => {
@@ -406,7 +406,15 @@ export default function subagentExtension(pi: ExtensionAPI) {
     handle: SubagentHandle,
     timeoutMs?: number,
   ): Promise<SubagentHandle> => {
-    if (handle.completionSettled || handle.state === 'idle')
+    // Return immediately for terminal or settled states.
+    // 'idle' is included because keep-alive mode resolves waiters without settling —
+    // the handle is usable as-is even though completionPromise may be absent.
+    if (
+      handle.state === 'idle' ||
+      handle.state === 'done' ||
+      handle.state === 'error' ||
+      (handle.state === 'killed' && handle.completionSettled)
+    )
       return handle.completionPromise || Promise.resolve(handle);
 
     return new Promise((resolve) => {
@@ -430,7 +438,16 @@ export default function subagentExtension(pi: ExtensionAPI) {
     signal?: AbortSignal,
   ): Promise<SubagentHandle> => {
     if (!signal) return waitForHandle(handle, timeoutMs);
-    if (signal.aborted || handle.completionSettled || handle.state === 'idle')
+    // On abort, return whatever state is available — caller chose to stop waiting.
+    // A killed-but-unsettled handle may lack completionPromise; that's expected on abort.
+    if (signal.aborted) return handle.completionPromise || Promise.resolve(handle);
+    // Return immediately for terminal or settled states (same rationale as waitForHandle).
+    if (
+      handle.state === 'idle' ||
+      handle.state === 'done' ||
+      handle.state === 'error' ||
+      (handle.state === 'killed' && handle.completionSettled)
+    )
       return handle.completionPromise || Promise.resolve(handle);
 
     return new Promise((resolve) => {
@@ -701,7 +718,7 @@ export default function subagentExtension(pi: ExtensionAPI) {
       }
 
       if (message.type === 'agent_start') {
-        updateHandle(handle, { state: 'running', statusText: 'Working…' });
+        updateHandle(handle, { state: 'running', statusText: 'Working…', error: undefined, stopReason: undefined });
         return;
       }
 
@@ -736,11 +753,10 @@ export default function subagentExtension(pi: ExtensionAPI) {
         const assistantError = message.message.errorMessage;
         const assistantFailed =
           assistantStopReason === 'error' || !!assistantError;
+        // Don't finalize error state here — message_end is tentative.
+        // agent_end decides the final state, avoiding premature 'error' if the process recovers.
         updateHandle(handle, {
-          state:
-            assistantFailed && handle.state !== 'killed'
-              ? 'error'
-              : handle.state,
+          state: handle.state,
           resultText: assistantText || handle.resultText,
           stopReason: assistantStopReason || handle.stopReason,
           error: assistantError || handle.error,
@@ -756,7 +772,8 @@ export default function subagentExtension(pi: ExtensionAPI) {
       }
 
       if (message.type === 'agent_end') {
-        if (handle.state === 'error') {
+        // Finalize error state — either set by prompt failure or tentatively flagged by message_end.
+        if (handle.state === 'error' || handle.stopReason === 'error' || handle.error) {
           updateHandle(handle, {
             state: 'error',
             statusText:
@@ -849,7 +866,9 @@ export default function subagentExtension(pi: ExtensionAPI) {
     });
 
     // sendRpc is async but we don't block on it — response is tracked via promptResolvers.
-    sendRpc(proc, handle, { type: 'prompt', message: task }).catch(() => {});
+    sendRpc(proc, handle, { type: 'prompt', message: task }).catch((err) => {
+      handle.stderr += `Initial prompt RPC failed: ${err instanceof Error ? err.message : String(err)}\n`;
+    });
     return handle;
   };
 
@@ -898,15 +917,6 @@ export default function subagentExtension(pi: ExtensionAPI) {
     return { discovery, agent };
   };
 
-  const materializeValidatedAgent = (spec: {
-    cwd?: string;
-    agent?: string;
-  }): Promise<{
-    discovery: AgentDiscovery;
-    agent?: AgentConfig;
-    error?: string;
-  }> => materializeAgent(spec);
-
   const waitForAllOrAbort = (
     handlesToWait: SubagentHandle[],
     timeoutMs: number | undefined,
@@ -951,8 +961,7 @@ export default function subagentExtension(pi: ExtensionAPI) {
         extensionContext = ctx;
         if (isNestedSubagent())
           return nestedDelegationBlocked('subagent_start');
-        const { discovery, agent, error } =
-          await materializeValidatedAgent(params);
+        const { discovery, agent, error } = await materializeAgent(params);
         if (!agent) {
           return {
             content: [
@@ -1097,15 +1106,18 @@ export default function subagentExtension(pi: ExtensionAPI) {
             details: {},
           };
         }
-        if (!isHandleActive(handle)) {
+        // Only reject if truly terminal — idle keep-alive subagents can still be killed.
+        if (
+          handle.state === 'done' ||
+          handle.state === 'error' ||
+          (handle.state === 'killed' && handle.completionSettled)
+        ) {
           const stateText =
             handle.state === 'done'
               ? 'already completed'
               : handle.state === 'error'
                 ? 'already failed'
-                : handle.state === 'killed'
-                  ? 'already killed'
-                  : `already ${handle.state}`;
+                : 'already killed';
           return {
             content: [
               {

@@ -41,8 +41,12 @@ export default function childSubagentExtension(pi: ExtensionAPI) {
 		applyInheritedActiveTools();
 	});
 
+	let systemPromptInjected = false;
+
 	pi.on("before_agent_start", async (event) => {
 		applyInheritedActiveTools();
+		if (systemPromptInjected) return;
+		systemPromptInjected = true;
 		const sections = [event.systemPrompt];
 		if (delegatedPrompt.trim()) {
 			sections.push(`Delegated subagent role (${agentName}):\n${delegatedPrompt.trim()}`);
