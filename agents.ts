@@ -8,11 +8,12 @@ export type AgentSource = "builtin" | "user" | "project";
 export interface AgentConfig {
 	name: string;
 	description: string;
-	tools?: string[];
-	model?: string;
+	tools: string[] | undefined;
 	systemPrompt: string;
 	source: AgentSource;
 	filePath: string;
+	model?: string;
+	models?: string;
 }
 
 export interface AgentDiscoveryResult {
@@ -69,17 +70,32 @@ async function readAgentDirectory(dir: string, source: AgentSource): Promise<Age
 					.map((value) => value.trim())
 					.filter(Boolean)
 				: undefined;
-		const model = typeof frontmatter.model === "string" ? frontmatter.model.trim() || undefined : undefined;
 
-		agents.push({
+		const model = typeof frontmatter.model === "string" ? frontmatter.model.trim() : undefined;
+
+		// models is passed as-is (comma-separated string or array)
+		let models: string | undefined;
+		if (Array.isArray(frontmatter.models)) {
+			models = frontmatter.models
+				.map((value) => (typeof value === "string" ? value.trim() : ""))
+				.filter(Boolean)
+				.join(",");
+		} else if (typeof frontmatter.models === "string") {
+			models = frontmatter.models.trim();
+		}
+
+		const obj: AgentConfig = {
 			name,
 			description,
 			tools: tools && tools.length > 0 ? tools : undefined,
-			model,
 			systemPrompt: body.trim(),
 			source,
 			filePath,
-		});
+		};
+		if (model) obj.model = model;
+		if (models) obj.models = models;
+
+		agents.push(obj);
 	}
 
 	return agents;
@@ -146,9 +162,8 @@ export function clearAgentDiscoveryCache(): void {
 export function formatAgentList(agents: AgentConfig[], maxItems = 12): string {
 	if (agents.length === 0) return "(none)";
 	const listed = agents.slice(0, maxItems).map((agent) => {
-		const model = agent.model ? ` model=${agent.model}` : "";
 		const tools = agent.tools?.length ? ` tools=${agent.tools.join(",")}` : "";
-		return `- ${agent.name} [${agent.source}]${model}${tools}: ${agent.description}`;
+		return `- ${agent.name} [${agent.source}]${tools}: ${agent.description}`;
 	});
 	const remaining = agents.length - listed.length;
 	if (remaining > 0) listed.push(`- ... and ${remaining} more`);
