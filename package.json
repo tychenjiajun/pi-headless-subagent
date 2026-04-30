@@ -1,13 +1,15 @@
 {
   "name": "pi-headless-subagent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Pi extension for spawning isolated subagents in separate pi --mode rpc subprocesses",
   "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package"
+  ],
   "author": "",
   "license": "ISC",
   "files": [
@@ -17,7 +19,9 @@
     "README.zh-CN.md"
   ],
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
