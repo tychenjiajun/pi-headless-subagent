@@ -911,7 +911,7 @@ export default function subagentExtension(pi: ExtensionAPI) {
       description: base?.description || 'Ad hoc delegated subagent',
       tools: spec.tools?.length ? spec.tools : base?.tools,
       systemPrompt: mergedPrompt,
-      source: base?.source || 'builtin',
+      source: base?.source || 'user',
       filePath: base?.filePath || '(ad hoc)',
     };
     return { discovery, agent };

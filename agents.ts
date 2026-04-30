@@ -3,7 +3,7 @@ import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { getAgentDir, parseFrontmatter } from "@mariozechner/pi-coding-agent";
 
-export type AgentSource = "builtin" | "user" | "project";
+export type AgentSource = "user" | "project";
 
 export interface AgentConfig {
 	name: string;
@@ -18,7 +18,6 @@ export interface AgentConfig {
 
 export interface AgentDiscoveryResult {
 	agents: AgentConfig[];
-	builtinDir: string;
 	userDir: string;
 	projectDir: string | null;
 }
@@ -114,12 +113,10 @@ async function findNearestProjectDir(cwd: string): Promise<string | null> {
 }
 
 async function discoverAgentsUncached(cwd: string, extensionDir: string): Promise<AgentDiscoveryResult> {
-	const builtinDir = path.join(extensionDir, "agents");
 	const userDir = path.join(getAgentDir(), "subagents");
 	const projectDir = await findNearestProjectDir(cwd);
 
 	const map = new Map<string, AgentConfig>();
-	for (const agent of await readAgentDirectory(builtinDir, "builtin")) map.set(agent.name, agent);
 	for (const agent of await readAgentDirectory(userDir, "user")) map.set(agent.name, agent);
 	if (projectDir) {
 		for (const agent of await readAgentDirectory(projectDir, "project")) map.set(agent.name, agent);
@@ -127,7 +124,6 @@ async function discoverAgentsUncached(cwd: string, extensionDir: string): Promis
 
 	return {
 		agents: Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)),
-		builtinDir,
 		userDir,
 		projectDir,
 	};
