@@ -97,22 +97,14 @@ Works on any non-terminal state: `starting`, `running`, `idle`, or unsettled `ki
 
 ---
 
-## Built-in agents
-
-This extension ships with:
-
-- **`scout`** — Fast read-mostly codebase reconnaissance. Use for finding code, tracing call sites, and collecting high-signal context.
-- **`reviewer`** — Read-only code review specialist. Returns independent, evidence-backed findings optimized for TLA synthesis.
-
 ## Custom agents
 
-Agent files are Markdown with YAML frontmatter.
+Agent files are Markdown with YAML frontmatter placed in:
 
-Lookup order (later sources override earlier ones by name):
+- User overrides: `~/.pi/agent/subagents/`
+- Project overrides: nearest `.pi/subagents/`
 
-1. Built-in agents: `./agents/` in this extension
-2. User overrides: `~/.pi/agent/subagents/`
-3. Project overrides: nearest `.pi/subagents/`
+Project overrides take precedence over user overrides when both define agents with the same name.
 
 ### Frontmatter schema
 

@@ -393,7 +393,7 @@ export default function subagentExtension(pi: ExtensionAPI) {
         if (handle.resultText) await ensureResultPersisted(handle);
       } finally {
         waiters.forEach((w) => {
-          w.timer && clearTimeout(w.timer);
+          if (w.timer) clearTimeout(w.timer);
           w.resolve(handle);
         });
         trimRetainedHandles();
@@ -456,7 +456,7 @@ export default function subagentExtension(pi: ExtensionAPI) {
         resolve(handle);
       };
       const cleanup = () => {
-        waiter.timer && clearTimeout(waiter.timer);
+        if (waiter.timer) clearTimeout(waiter.timer);
         handle.waiters = handle.waiters.filter((v) => v !== waiter);
         signal.removeEventListener('abort', onAbort);
       };
