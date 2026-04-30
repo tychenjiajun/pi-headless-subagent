@@ -10,6 +10,12 @@
   "keywords": ["pi-package"],
   "author": "",
   "license": "ISC",
+  "files": [
+    "*.ts",
+    "agents/",
+    "README.md",
+    "README.zh-CN.md"
+  ],
   "pi": {
     "extensions": ["./index.ts"]
   },
