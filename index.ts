@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url';
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 import { Type } from '@sinclair/typebox';
-import { defineTool } from '@mariozechner/pi-coding-agent';
+import { defineTool } from '@earendil-works/pi-coding-agent';
 import {
   clearAgentDiscoveryCache,
   discoverAgents,
@@ -191,6 +191,20 @@ const extractText = (content: unknown): string => {
     )
     .filter(Boolean)
     .join('\n');
+};
+
+/**
+ * Check if an error message indicates a retryable condition.
+ * Matches overloaded, rate limit, server errors (5xx), network/connection issues,
+ * but excludes context overflow (handled by compaction instead).
+ */
+const isRetryableError = (errorMessage: string | undefined): boolean => {
+  if (!errorMessage) return false;
+  // Context overflow is NOT retryable (handled by compaction)
+  if (/context.?overflow|context.?exceeded|too many tokens|context window/i.test(errorMessage))
+    return false;
+  // Retryable: overloaded, rate limit, 429/5xx, service unavailable, network/connection errors
+  return /overloaded|provider.?returned.?error|rate.?limit|too many requests|429|500|502|503|504|service.?unavailable|server.?error|internal.?error|network.?error|connection.?error|connection.?refused|connection.?lost|websocket.?closed|websocket.?error|other side closed|fetch failed|upstream.?connect|reset before headers|socket hang up|ended without|http2 request did not get a response|timed? out|timeout|terminated|retry delay/i.test(errorMessage);
 };
 
 const getPiInvocation = (
@@ -773,7 +787,14 @@ export default function subagentExtension(pi: ExtensionAPI) {
 
       if (message.type === 'agent_end') {
         // Finalize error state — either set by prompt failure or tentatively flagged by message_end.
-        if (handle.state === 'error' || handle.stopReason === 'error' || handle.error) {
+        // Skip 'error' state for retryable errors so the subagent can recover via Pi's auto-retry.
+        const isErrorState =
+          handle.state === 'error' ||
+          handle.stopReason === 'error' ||
+          handle.error;
+        const isRetryable = isErrorState && isRetryableError(handle.error);
+        if (isErrorState && !isRetryable) {
+          // Non-retryable error: finalize as error and settle
           updateHandle(handle, {
             state: 'error',
             statusText:
@@ -786,6 +807,13 @@ export default function subagentExtension(pi: ExtensionAPI) {
             statusText: handle.error || handle.statusText || 'Killed',
           });
           settleHandle(handle);
+        } else if (isRetryable) {
+          // Retryable error: stay in 'running' state and don't settle,
+          // let Pi's auto-retry mechanism attempt recovery
+          updateHandle(handle, {
+            state: 'running',
+            statusText: `Retrying… ${truncate(handle.error, 72)}`,
+          });
         } else {
           // Subagent finished its turn but stays alive (keep-alive mode).
           // Transition to idle so subagent_prompt can send follow-ups.

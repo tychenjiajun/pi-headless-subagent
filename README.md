@@ -190,3 +190,4 @@ N. subagent_kill({ id: "abc" })
 - **Abort behavior** — aborting the parent agent also aborts all active subagents; aborting `subagent_wait` stops waiting but leaves the subagent alive
 - **Model inheritance** — subagents inherit the parent session model by default; override with `model`/`models` in agent frontmatter
 - **Extension loading** — child processes load the same extensions/plugins as the parent (unlike `--no-session`)
+- **Retry behavior (v1.2.0+)** — transient errors (rate limits, 5xx responses, network issues, timeouts) trigger Pi's auto-retry instead of immediately failing. The subagent stays in `running` state while retries proceed. Context overflow errors are NOT retried (handled by compaction).
