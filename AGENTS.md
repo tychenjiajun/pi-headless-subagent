@@ -6,7 +6,7 @@
 ## Commands
 | Task | Command |
 |------|---------|
-| Test extension | `pi run --extension ./index.ts "prompt"` |
+| Test extension | `pi -p -e ./index.ts "prompt"` |
 | Typecheck | `npx tsc --noEmit` |
 
 ## Key Files
