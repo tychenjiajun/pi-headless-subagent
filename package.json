@@ -15,7 +15,7 @@
   "files": [
     "*.ts",
     "README.md",
-    "README.zh-CN.md",
+    "docs/**",
     "AGENTS.md",
     "CONTEXT.md"
   ],
