@@ -2,27 +2,48 @@
   "name": "pi-headless-subagent",
   "version": "1.3.1",
   "type": "module",
-  "description": "Pi extension for spawning isolated subagents in separate pi --mode rpc subprocesses",
+  "description": "Pi extension that spawns isolated subagents in separate pi --mode rpc processes: run parallel multi-agent swarms, sequential chains, and keep-alive background subagents with start, wait, prompt, and kill tools for headless orchestration.",
   "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "pi-package"
+    "pi-package",
+    "pi-extension",
+    "subagent",
+    "multi-agent",
+    "rpc",
+    "headless",
+    "orchestration",
+    "parallel",
+    "delegation",
+    "coding-agent",
+    "agent-swarm"
   ],
   "author": "",
   "license": "ISC",
+  "homepage": "https://pi.dev/packages/pi-headless-subagent",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tychenjiajun/pi-headless-subagent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tychenjiajun/pi-headless-subagent/issues"
+  },
   "files": [
     "*.ts",
     "README.md",
     "docs/**",
     "AGENTS.md",
-    "CONTEXT.md"
+    "CONTEXT.md",
+    "assets/**"
   ],
   "pi": {
     "extensions": [
       "./index.ts"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/tychenjiajun/pi-headless-subagent/main/assets/preview.png",
+    "video": "https://raw.githubusercontent.com/tychenjiajun/pi-headless-subagent/main/assets/demo.mp4"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",

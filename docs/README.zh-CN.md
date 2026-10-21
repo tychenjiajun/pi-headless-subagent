@@ -1,12 +1,18 @@
 # pi-headless-subagent
 
-一个 Pi 扩展，用于在独立的 `pi --mode rpc` 子进程中生成隔离的子代理。
+![pi-headless-subagent preview](https://raw.githubusercontent.com/tychenjiajun/pi-headless-subagent/main/assets/preview.png)
+
+一个 **Pi 扩展，用于在独立的 `pi --mode rpc` 子进程中生成隔离的子代理** —— 在单个 pi 会话中编排并行多代理集群、串行链和保活后台子代理，每个子代理拥有独立的上下文、工具和历史。
+
+📦 [画廊页面](https://pi.dev/packages/pi-headless-subagent) · 📚 [pi 包文档](https://pi.dev/docs/latest/packages)
 
 ## 安装
 
 ```bash
 pi install npm:pi-headless-subagent
 ```
+
+![pi-headless-subagent 演示](https://raw.githubusercontent.com/tychenjiajun/pi-headless-subagent/main/assets/demo.gif)
 
 ---
 
@@ -192,3 +198,21 @@ N. subagent_kill({ id: "abc" })
 - **扩展加载** — 子进程与父进程加载相同的扩展/插件（不同于 `--no-session`）
 - **重试行为 (v1.2+)** — 瞬态错误（速率限制、5xx、网络问题）会触发 Pi 的自动重试而非立即失败。详见 [CONTEXT.md](CONTEXT.md)。
 - **重试行为 (v1.2.0+)** — 瞬态错误（速率限制、5xx 响应、网络问题、超时）会触发 Pi 的自动重试而非立即失败。子代理保持在 `running` 状态直到重试完成或耗尽。上下文溢出错误不会重试（由压缩处理）。
+
+## 常见问题
+
+### pi-headless-subagent 是做什么的？
+
+这是一个 Pi（`pi-coding-agent`）扩展，通过 `pi --mode rpc` 在隔离的子进程中运行委托任务。主会话可通过 `subagent_start`、`subagent_wait`、`subagent_prompt`、`subagent_list` 和 `subagent_kill` 编排并行子代理。
+
+### 子代理还能再生成子代理吗？
+
+不能 — 嵌套委派被刻意禁止。子代理会将需求报告回父会话，而不会生成孙代理。
+
+### 子代理完成后会保持存活吗？
+
+会，默认启用保活：子代理每轮结束后进入 `idle`，可用 `subagent_prompt` 直接发送后续提示而无需重新生成。用完后调用 `subagent_kill`，或随父会话结束一并退出。
+
+### 如何安装 pi-headless-subagent？
+
+运行 `pi install npm:pi-headless-subagent`，其他安装方式见 [pi 包文档](https://pi.dev/docs/latest/packages)。[画廊页面](https://pi.dev/packages/pi-headless-subagent) 展示渲染后的 README 与演示视频。

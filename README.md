@@ -1,12 +1,18 @@
 # pi-headless-subagent
 
-A pi extension for spawning isolated subagents in separate `pi --mode rpc` subprocesses.
+![pi-headless-subagent preview](https://raw.githubusercontent.com/tychenjiajun/pi-headless-subagent/main/assets/preview.png)
+
+A **Pi extension that spawns isolated subagents in separate `pi --mode rpc` subprocesses** — run parallel multi-agent swarms, sequential chains, and keep-alive background subagents from a single pi session, each with its own context, tools, and history.
+
+📦 [Gallery page](https://pi.dev/packages/pi-headless-subagent) · 📚 [pi packages documentation](https://pi.dev/docs/latest/packages)
 
 ## Install
 
 ```bash
 pi install npm:pi-headless-subagent
 ```
+
+![pi-headless-subagent demo](https://raw.githubusercontent.com/tychenjiajun/pi-headless-subagent/main/assets/demo.gif)
 
 ---
 
@@ -192,3 +198,21 @@ N. subagent_kill({ id: "abc" })
 - **Extension loading** — child processes load the same extensions/plugins as the parent (unlike `--no-session`)
 - **Retry behavior (v1.2+)** — transient errors (rate limits, 5xx, network issues) trigger Pi's auto-retry instead of immediately failing. See [CONTEXT.md](CONTEXT.md).
 - **Retry behavior (v1.2.0+)** — transient errors (rate limits, 5xx responses, network issues, timeouts) trigger Pi's auto-retry instead of immediately failing. The subagent stays in `running` state while retries proceed. Context overflow errors are NOT retried (handled by compaction).
+
+## FAQ
+
+### What does pi-headless-subagent do?
+
+It is a Pi (`pi-coding-agent`) extension that runs delegated work in isolated child processes, each started with `pi --mode rpc`. One main session can orchestrate parallel subagents via `subagent_start`, `subagent_wait`, `subagent_prompt`, `subagent_list`, and `subagent_kill`.
+
+### Can a subagent spawn its own subagents?
+
+No — nested delegation is deliberately blocked. Subagents report needs back to the parent session instead of spawning grandchildren.
+
+### Do subagents stay alive after finishing?
+
+Yes, keep-alive is the default: a subagent becomes `idle` after each turn so you can send follow-ups with `subagent_prompt` without re-spawning. Call `subagent_kill` when done, or they exit when the parent session ends.
+
+### How do I install pi-headless-subagent?
+
+Run `pi install npm:pi-headless-subagent`, or see the [packages documentation](https://pi.dev/docs/latest/packages) for other install sources. The [gallery page](https://pi.dev/packages/pi-headless-subagent) shows the rendered README and demo video.
