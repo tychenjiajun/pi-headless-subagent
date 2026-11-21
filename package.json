@@ -50,9 +50,9 @@
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.5.2",
-    "typebox": "^1.4.6",
-    "knip": "^6.45.1",
+    "@earendil-works/pi-coding-agent": "^1.6.0",
+    "typebox": "^1.4.7",
+    "knip": "^6.47.0",
     "typescript": "^7.0.2"
   },
   "packageManager": "pnpm@12.5.1"
